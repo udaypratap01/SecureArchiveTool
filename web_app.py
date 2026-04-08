@@ -4,6 +4,7 @@ Flask-based web application for cracking archive passwords
 """
 
 from flask import Flask, render_template, request, jsonify, send_file
+from flask_cors import CORS
 import zipfile
 import threading
 import os
@@ -22,6 +23,9 @@ except ImportError:
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
+
+# Enable CORS for all routes
+CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # Error handlers to return JSON instead of HTML
 @app.errorhandler(404)
@@ -257,6 +261,11 @@ def crack_rar_internal(archive_path, passwords):
     
     except Exception as e:
         add_message(f"✗ Error opening RAR: {e}", 'error')
+
+@app.route('/health', methods=['GET'])
+def health():
+    """Health check endpoint"""
+    return jsonify({'status': 'ok', 'message': 'Server is running'}), 200
 
 @app.route('/')
 def index():
