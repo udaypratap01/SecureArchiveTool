@@ -28,6 +28,10 @@ app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 def not_found(error):
     return jsonify({'error': 'Endpoint not found'}), 404
 
+@app.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({'error': 'Method not allowed. Please use GET or POST.'}), 405
+
 @app.errorhandler(500)
 def server_error(error):
     return jsonify({'error': 'Server error: ' + str(error)}), 500
@@ -315,7 +319,7 @@ def crack():
         cracking_state['is_cracking'] = False
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/status')
+@app.route('/api/status', methods=['GET', 'POST'])
 def get_status():
     """Get current status"""
     return jsonify({
