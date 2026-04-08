@@ -23,6 +23,19 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 app.config['UPLOAD_FOLDER'] = tempfile.gettempdir()
 
+# Error handlers to return JSON instead of HTML
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Endpoint not found'}), 404
+
+@app.errorhandler(500)
+def server_error(error):
+    return jsonify({'error': 'Server error: ' + str(error)}), 500
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return jsonify({'error': 'Error: ' + str(e)}), 500
+
 # Global state for tracking cracking process
 cracking_state = {
     'is_cracking': False,
