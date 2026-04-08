@@ -465,43 +465,55 @@
                 
                 // Poll for status updates
                 const statusInterval = setInterval(async () => {
-                    const statusResp = await fetch('/api/status');
-                    const status = await statusResp.json();
+                    try {
+                        const statusResp = await fetch('/api/status');
+                        if (!statusResp.ok) {
+                            throw new Error('Status endpoint returned ' + statusResp.status);
+                        }
+                        const text = await statusResp.text();
+                        if (!text) {
+                            throw new Error('Empty response from server');
+                        }
+                        const status = JSON.parse(text);
 
-                    // Add new messages
-                    if (status.messages && status.messages.length > 0) {
-                        const currentMessages = document.querySelectorAll('.message');
-                        const lastCount = currentMessages.length;
-                        
-                        if (status.messages.length > lastCount) {
-                            for (let i = lastCount; i < status.messages.length; i++) {
-                                const msg = status.messages[i];
-                                addMessageElement(msg);
+                        // Add new messages
+                        if (status.messages && status.messages.length > 0) {
+                            const currentMessages = document.querySelectorAll('.message');
+                            const lastCount = currentMessages.length;
+                            
+                            if (status.messages.length > lastCount) {
+                                for (let i = lastCount; i < status.messages.length; i++) {
+                                    const msg = status.messages[i];
+                                    addMessageElement(msg);
+                                }
                             }
                         }
-                    }
 
-                    // Update progress
-                    if (status.progress > 0) {
-                        document.getElementById('progressFill').style.width = status.progress + '%';
-                        document.getElementById('progressFill').textContent = status.progress + '%';
-                    }
-
-                    // Check if password found
-                    if (status.found_password) {
-                        showPasswordFound(status.found_password, status.archive_contents);
-                    }
-
-                    // Check if done
-                    if (!status.is_cracking) {
-                        clearInterval(statusInterval);
-                        document.getElementById('startBtn').disabled = false;
-                        document.getElementById('stopBtn').disabled = true;
-                        
-                        if (!status.found_password) {
-                            document.getElementById('statusText').innerHTML = 
-                                '<span class="status-badge not-found">Password not found</span>';
+                        // Update progress
+                        if (status.progress > 0) {
+                            document.getElementById('progressFill').style.width = status.progress + '%';
+                            document.getElementById('progressFill').textContent = status.progress + '%';
                         }
+
+                        // Check if password found
+                        if (status.found_password) {
+                            showPasswordFound(status.found_password, status.archive_contents);
+                        }
+
+                        // Check if done
+                        if (!status.is_cracking) {
+                            clearInterval(statusInterval);
+                            document.getElementById('startBtn').disabled = false;
+                            document.getElementById('stopBtn').disabled = true;
+                            
+                            if (!status.found_password) {
+                                document.getElementById('statusText').innerHTML = 
+                                    '<span class="status-badge not-found">Password not found</span>';
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Status polling error:', error);
+                        addMessage('Connection error: ' + error.message, 'error');
                     }
                 }, 500);
 
@@ -597,9 +609,20 @@
 
         // Initial status check
         window.addEventListener('load', async () => {
-            const status = await fetch('/api/status').then(r => r.json());
-            if (status.messages.length === 0) {
-                addMessage('Ready to crack passwords', 'info');
+            try {
+                const response = await fetch('/api/status');
+                if (!response.ok) {
+                    addMessage('⚠️ Cannot connect to server on port 5000', 'error');
+                    addMessage('Make sure Flask server is running: python web_app.py', 'info');
+                    return;
+                }
+                const status = await response.json();
+                if (status.messages.length === 0) {
+                    addMessage('✓ Server connected. Ready to crack passwords', 'success');
+                }
+            } catch (error) {
+                addMessage('⚠️ Connection failed: ' + error.message, 'error');
+                addMessage('Make sure Flask server is running: python web_app.py', 'info');
             }
         });
     </script>
